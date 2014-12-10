@@ -38,6 +38,12 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
+/**
+ * regular do fnts ignore sideoutputs. we deal with sideouts by having tuple tags.
+ *
+ * @param <I>
+ * @param <O>
+ */
 class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleTag<?>, Object> {
 
   private final DoFn<I, O> fn;

@@ -21,8 +21,32 @@ import com.google.cloud.dataflow.sdk.PipelineResult;
 import com.google.cloud.dataflow.sdk.values.PCollection;
 import com.google.cloud.dataflow.sdk.values.PObject;
 
+/**
+ * What should implement this interface?
+ */
 public interface EvaluationResult extends PipelineResult {
+    /**
+     *
+     * @param pcollection
+     * @param <T>
+     * @return
+     */
   <T> Iterable<T> get(PCollection<T> pcollection);
+
+    /**
+     * Why is this never used?
+     * @param pobject
+     * @param <T>
+     * @return
+     */
   <T> T get(PObject<T> pobject);
+
+    /**
+     * What is named?
+     * @param named
+     * @param resultType
+     * @param <T>
+     * @return
+     */
   <T> T getAggregatorValue(String named, Class<T> resultType);
 }

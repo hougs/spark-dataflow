@@ -41,6 +41,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Defines ma[pping between dataflow objects and corresponding rdd/spark objects
+ */
 public class EvaluationContext implements EvaluationResult {
   private final JavaSparkContext jsc;
   private final Pipeline pipeline;
