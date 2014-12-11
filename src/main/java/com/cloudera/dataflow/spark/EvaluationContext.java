@@ -36,13 +36,12 @@ import org.apache.spark.api.java.JavaRDDLike;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Defines ma[pping between dataflow objects and corresponding rdd/spark objects
+ * Evaluation context allows us to define how pipeline instructions
  */
 public class EvaluationContext implements EvaluationResult {
   private final JavaSparkContext jsc;
