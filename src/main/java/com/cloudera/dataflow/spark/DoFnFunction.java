@@ -15,13 +15,6 @@
 
 package com.cloudera.dataflow.spark;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
-
 import com.google.cloud.dataflow.sdk.options.PipelineOptions;
 import com.google.cloud.dataflow.sdk.transforms.Aggregator;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
@@ -34,6 +27,12 @@ import com.google.common.collect.ImmutableList;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.joda.time.Instant;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.logging.Logger;
+
 /**
  * Dataflow's Do functions correspond to Spark's FlatMap functions.
  *
@@ -45,20 +44,16 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
 
     private final DoFn<I, O> mFunction;
     private final SparkRuntimeContext mRuntimeContext;
-    private final Map<TupleTag<?>, BroadcastHelper<?>> mSideInputs;
 
     /**
      * @param fn         DoFunction to be wrapped.
      * @param runtime    Runtime to apply function in.
-     * @param sideInputs Side inputs used in DoFunction.
      */
     public DoFnFunction(
             DoFn<I, O> fn,
-            SparkRuntimeContext runtime,
-            Map<TupleTag<?>, BroadcastHelper<?>> sideInputs) {
+            SparkRuntimeContext runtime) {
         this.mFunction = fn;
         this.mRuntimeContext = runtime;
-        this.mSideInputs = sideInputs;
     }
 
 
@@ -74,12 +69,12 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
         }
         //cleanup
         mFunction.finishBundle(ctxt);
-        return ctxt.outputs;
+        return ctxt.mOutputs;
     }
 
     private class ProcCtxt<I, O> extends DoFn<I, O>.ProcessContext {
 
-        private List<O> outputs = new LinkedList<>();
+        private List<O> mOutputs = new LinkedList<>();
         private I element;
 
         public ProcCtxt(DoFn<I, O> fn) {
@@ -93,12 +88,12 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
 
         @Override
         public <T> T sideInput(PCollectionView<T, ?> view) {
-            return (T) mSideInputs.get(view.getTagInternal()).getValue();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public synchronized void output(O o) {
-            outputs.add(o);
+            mOutputs.add(o);
         }
 
         @Override

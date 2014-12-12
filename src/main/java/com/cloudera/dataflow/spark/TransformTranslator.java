@@ -1,13 +1,27 @@
 package com.cloudera.dataflow.spark;
 
+import com.clearspring.analytics.util.Lists;
 import com.google.api.client.util.Maps;
 import com.google.cloud.dataflow.sdk.coders.Coder;
 import com.google.cloud.dataflow.sdk.io.AvroIO;
 import com.google.cloud.dataflow.sdk.io.TextIO;
-import com.google.cloud.dataflow.sdk.transforms.*;
+import com.google.cloud.dataflow.sdk.transforms.Combine;
+import com.google.cloud.dataflow.sdk.transforms.Convert;
+import com.google.cloud.dataflow.sdk.transforms.Create;
+import com.google.cloud.dataflow.sdk.transforms.CreatePObject;
+import com.google.cloud.dataflow.sdk.transforms.Flatten;
+import com.google.cloud.dataflow.sdk.transforms.GroupByKey;
+import com.google.cloud.dataflow.sdk.transforms.PTransform;
+import com.google.cloud.dataflow.sdk.transforms.ParDo;
+import com.google.cloud.dataflow.sdk.transforms.SeqDo;
 import com.google.cloud.dataflow.sdk.util.WindowedValue;
-import com.google.cloud.dataflow.sdk.values.*;
-import com.google.common.collect.ImmutableMap;
+import com.google.cloud.dataflow.sdk.values.KV;
+import com.google.cloud.dataflow.sdk.values.PCollection;
+import com.google.cloud.dataflow.sdk.values.PCollectionList;
+import com.google.cloud.dataflow.sdk.values.PCollectionTuple;
+import com.google.cloud.dataflow.sdk.values.PObject;
+import com.google.cloud.dataflow.sdk.values.PObjectValueTuple;
+import com.google.cloud.dataflow.sdk.values.TupleTag;
 import com.google.common.collect.Iterables;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -105,9 +119,9 @@ public class TransformTranslator {
     private static TransformEvaluator<ParDo.Bound> PARDO = new TransformEvaluator<ParDo.Bound>() {
         @Override
         public void evaluate(ParDo.Bound transform, EvaluationContext context) {
+          //TODO: Logic for side inputs
             DoFnFunction dofn = new DoFnFunction(transform.getFn(),
-                    context.getRuntimeContext(),
-                    getSideInputs(transform.getSideInputs(), context));
+                    context.getRuntimeContext());
             context.setOutputRDD(transform, context.getInputRDD(transform).mapPartitions(dofn));
         }
     };
@@ -116,11 +130,11 @@ public class TransformTranslator {
     private static TransformEvaluator<ParDo.BoundMulti> MULTIDO = new TransformEvaluator<ParDo.BoundMulti>() {
         @Override
         public void evaluate(ParDo.BoundMulti transform, EvaluationContext context) {
+          //TODO:Logic for side inputs
             MultiDoFnFunction multifn = new MultiDoFnFunction(
                     transform.getFn(),
                     context.getRuntimeContext(),
-                    (TupleTag) MULTIDO_FG.get("mainOutputTag", transform),
-                    getSideInputs(transform.getSideInputs(), context));
+                    (TupleTag) MULTIDO_FG.get("mainOutputTag", transform));
 
             JavaPairRDD<TupleTag, Object> all = context.getInputRDD(transform)
                     .mapPartitionsToPair(multifn)
@@ -177,9 +191,8 @@ public class TransformTranslator {
         public void evaluate(Create transform, EvaluationContext context) {
             Iterable elems = transform.getElements();
             Coder coder = ((PCollection) context.getOutput(transform)).getCoder();
-            JavaRDD rdd = context.getSparkContext().parallelize(
-                    CoderHelpers.toByteArrays(elems, coder));
-            context.setOutputRDD(transform, rdd.map(CoderHelpers.fromByteFunction(coder)));
+            JavaRDD rdd = context.getSparkContext().parallelize(Lists.newArrayList(elems));
+            context.setOutputRDD(transform, rdd);
         }
     };
 
@@ -237,19 +250,6 @@ public class TransformTranslator {
         }
     };
 
-    private static Map<TupleTag<?>, BroadcastHelper<?>> getSideInputs(
-            Iterable<PCollectionView<?, ?>> views,
-            EvaluationContext context) {
-        if (views == null) {
-            return ImmutableMap.of();
-        } else {
-            Map<TupleTag<?>, BroadcastHelper<?>>sideInputs = Maps.newHashMap();
-            for (PCollectionView<?, ?> view : views) {
-                sideInputs.put(view.getTagInternal(), context.getBroadcastHelper(view.getPObjectInternal()));
-            }
-            return sideInputs;
-        }
-    }
 
     private static final Map<Class<? extends PTransform>, TransformEvaluator> mEvaluators = Maps.newHashMap();
     static {

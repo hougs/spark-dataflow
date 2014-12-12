@@ -14,10 +14,6 @@
  */
 package com.cloudera.dataflow.spark;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-
 import com.google.cloud.dataflow.sdk.options.PipelineOptions;
 import com.google.cloud.dataflow.sdk.transforms.Aggregator;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
@@ -35,6 +31,10 @@ import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.joda.time.Instant;
 import scala.Tuple2;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+
 /**
  * DoFunctions ignore side outputs. MultiDoFunctions deal with side outputs by enrishing the
  * undelrying data with multiple TupleTags.
@@ -50,17 +50,14 @@ class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleT
     private final DoFn<I, O> mFunction;
     private final SparkRuntimeContext mRuntimeContext;
     private final TupleTag<?> mMainOutputTag;
-    private final Map<TupleTag<?>, BroadcastHelper<?>> mSideInputs;
 
     public MultiDoFnFunction(
             DoFn<I, O> fn,
             SparkRuntimeContext runtimeContext,
-            TupleTag<O> mainOutputTag,
-            Map<TupleTag<?>, BroadcastHelper<?>> sideInputs) {
+            TupleTag<O> mainOutputTag) {
         this.mFunction = fn;
         this.mRuntimeContext = runtimeContext;
         this.mMainOutputTag = mainOutputTag;
-        this. mSideInputs = sideInputs;
     }
 
     @Override
@@ -68,22 +65,22 @@ class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleT
         ProcCtxt<I, O> ctxt = new ProcCtxt(mFunction);
         mFunction.startBundle(ctxt);
         while (iter.hasNext()) {
-            ctxt.element = iter.next();
+            ctxt.mElement = iter.next();
             mFunction.processElement(ctxt);
         }
         mFunction.finishBundle(ctxt);
-        return Iterables.transform(ctxt.outputs.entries(),
-                new Function<Map.Entry<TupleTag<?>, Object>, Tuple2<TupleTag<?>, Object>>() {
-                    public Tuple2<TupleTag<?>, Object> apply(Map.Entry<TupleTag<?>, Object> input) {
-                        return new Tuple2<TupleTag<?>, Object>(input.getKey(), input.getValue());
-                    }
-                });
+        return Iterables.transform(ctxt.mOutputs.entries(),
+            new Function<Map.Entry<TupleTag<?>, Object>, Tuple2<TupleTag<?>, Object>>() {
+              public Tuple2<TupleTag<?>, Object> apply(Map.Entry<TupleTag<?>, Object> input) {
+                return new Tuple2<TupleTag<?>, Object>(input.getKey(), input.getValue());
+              }
+            });
     }
 
     private class ProcCtxt<I, O> extends DoFn<I, O>.ProcessContext {
 
-        private Multimap<TupleTag<?>, Object> outputs = LinkedListMultimap.create();
-        private I element;
+        private Multimap<TupleTag<?>, Object> mOutputs = LinkedListMultimap.create();
+        private I mElement;
 
         public ProcCtxt(DoFn<I, O> fn) {
             fn.super();
@@ -96,17 +93,17 @@ class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleT
 
         @Override
         public <T> T sideInput(PCollectionView<T, ?> view) {
-            return (T)  mSideInputs.get(view.getTagInternal()).getValue();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public synchronized void output(O o) {
-            outputs.put(mMainOutputTag, o);
+            mOutputs.put(mMainOutputTag, o);
         }
 
         @Override
         public synchronized <T> void sideOutput(TupleTag<T> tag, T t) {
-            outputs.put(tag, t);
+            mOutputs.put(tag, t);
         }
 
         @Override
@@ -125,7 +122,7 @@ class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleT
 
         @Override
         public I element() {
-            return element;
+            return mElement;
         }
 
         @Override

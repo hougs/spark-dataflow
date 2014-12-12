@@ -101,11 +101,6 @@ public class EvaluationContext implements EvaluationResult {
         return getRDD((PValue) pipeline.getInput(transform));
     }
 
-    <T> BroadcastHelper<T> getBroadcastHelper(PObject<T> value) {
-        Coder<T> coder = value.getCoder();
-        Broadcast<byte[]> bcast = jsc.broadcast(CoderHelpers.toByteArray(get(value), coder));
-        return new BroadcastHelper<>(bcast, coder);
-    }
 
     @Override
     public <T> T get(PObject<T> value) {
@@ -113,7 +108,6 @@ public class EvaluationContext implements EvaluationResult {
             return (T) pobjects.get(value);
         } else if (rdds.containsKey(value)) {
             JavaRDDLike rdd = rdds.get(value);
-            //TODO: need same logic from get() method below here for serialization of bytes
             T res = (T) Iterables.getOnlyElement(rdd.collect());
             pobjects.put(value, res);
             return res;
@@ -129,14 +123,7 @@ public class EvaluationContext implements EvaluationResult {
     @Override
     public <T> Iterable<T> get(PCollection<T> pcollection) {
         JavaRDDLike rdd = getRDD(pcollection);
-        final Coder coder = pcollection.getCoder();
-        JavaRDDLike bytes = rdd.map(CoderHelpers.toByteFunction(coder));
-        List clientBytes = bytes.collect();
-        return Iterables.transform(clientBytes, new Function<byte[], T>() {
-            public T apply(byte[] bytes) {
-                return (T) CoderHelpers.fromByteArray(bytes, coder);
-            }
-        });
+        return rdd.collect();
     }
 
     PObjectValueTuple getPObjectTuple(PTransform transform) {
