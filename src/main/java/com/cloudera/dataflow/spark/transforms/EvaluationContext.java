@@ -16,7 +16,6 @@ package com.cloudera.dataflow.spark.transforms;
 
 import com.cloudera.dataflow.spark.EvaluationResult;
 import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.coders.Coder;
 import com.google.cloud.dataflow.sdk.transforms.PTransform;
 import com.google.cloud.dataflow.sdk.values.PCollection;
 import com.google.cloud.dataflow.sdk.values.PInput;
@@ -26,14 +25,12 @@ import com.google.cloud.dataflow.sdk.values.PObjectValueTuple;
 import com.google.cloud.dataflow.sdk.values.POutput;
 import com.google.cloud.dataflow.sdk.values.PValue;
 import com.google.cloud.dataflow.sdk.values.TupleTag;
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.spark.api.java.JavaRDDLike;
 import org.apache.spark.api.java.JavaSparkContext;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -122,15 +119,7 @@ public class EvaluationContext implements EvaluationResult {
 
     @Override
     public <T> Iterable<T> get(PCollection<T> pcollection) {
-        JavaRDDLike rdd = getRDD(pcollection);
-        final Coder coder = pcollection.getCoder();
-        JavaRDDLike bytes = rdd.map(CoderHelpers.toByteFunction(coder));
-        List clientBytes = bytes.collect();
-        return Iterables.transform(clientBytes, new Function<byte[], T>() {
-          public T apply(byte[] bytes) {
-            return (T) CoderHelpers.fromByteArray(bytes, coder);
-          }
-        });
+        return getRDD(pcollection).collect();
     }
 
     PObjectValueTuple getPObjectTuple(PTransform transform) {
