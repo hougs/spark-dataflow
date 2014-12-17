@@ -7,7 +7,7 @@ public class TestSparkPipelineOptionsFactory {
   @Test
   public void testDefaultCreateMethod() {
     SparkPipelineOptions actualOptions = SparkPipelineOptionsFactory.create();
-    Assert.assertEquals(actualOptions.getSparkMaster(), "local");
+    Assert.assertEquals(actualOptions.getSparkMaster(), "local[1]");
   }
 
   @Test
