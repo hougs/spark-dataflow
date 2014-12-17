@@ -12,12 +12,9 @@
  * the specific language governing permissions and limitations under the
  * License.
  */
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.transforms;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import com.cloudera.dataflow.spark.EvaluationResult;
 import com.google.cloud.dataflow.sdk.Pipeline;
 import com.google.cloud.dataflow.sdk.coders.Coder;
 import com.google.cloud.dataflow.sdk.transforms.PTransform;
@@ -36,6 +33,10 @@ import com.google.common.collect.Sets;
 import org.apache.spark.api.java.JavaRDDLike;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Evaluation context allows us to define how pipeline instructions
@@ -133,9 +134,9 @@ public class EvaluationContext implements EvaluationResult {
         JavaRDDLike bytes = rdd.map(CoderHelpers.toByteFunction(coder));
         List clientBytes = bytes.collect();
         return Iterables.transform(clientBytes, new Function<byte[], T>() {
-            public T apply(byte[] bytes) {
-                return (T) CoderHelpers.fromByteArray(bytes, coder);
-            }
+          public T apply(byte[] bytes) {
+            return (T) CoderHelpers.fromByteArray(bytes, coder);
+          }
         });
     }
 

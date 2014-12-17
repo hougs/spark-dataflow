@@ -12,7 +12,7 @@
  * the specific language governing permissions and limitations under the
  * License.
  */
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.transforms;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

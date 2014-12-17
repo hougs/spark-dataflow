@@ -1,4 +1,4 @@
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.options;
 
 import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
 

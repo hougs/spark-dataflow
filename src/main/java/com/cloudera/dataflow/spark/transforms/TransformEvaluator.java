@@ -13,7 +13,7 @@
  * License.
  */
 
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.transforms;
 
 import java.io.Serializable;
 

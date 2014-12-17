@@ -15,6 +15,11 @@
 
 package com.cloudera.dataflow.spark;
 
+import com.cloudera.dataflow.spark.options.SparkPipelineOptions;
+import com.cloudera.dataflow.spark.options.SparkPipelineOptionsFactory;
+import com.cloudera.dataflow.spark.transforms.EvaluationContext;
+import com.cloudera.dataflow.spark.transforms.TransformEvaluator;
+import com.cloudera.dataflow.spark.transforms.TransformTranslator;
 import com.google.cloud.dataflow.sdk.Pipeline;
 import com.google.cloud.dataflow.sdk.runners.PipelineRunner;
 import com.google.cloud.dataflow.sdk.runners.TransformTreeNode;

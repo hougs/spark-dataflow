@@ -12,16 +12,14 @@
  * the specific language governing permissions and limitations under the
  * License.
  */
-
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.transforms;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
+import com.cloudera.dataflow.spark.BroadcastHelper;
+import com.cloudera.dataflow.spark.transforms.SparkRuntimeContext;
 import com.google.cloud.dataflow.sdk.options.PipelineOptions;
 import com.google.cloud.dataflow.sdk.transforms.Aggregator;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
@@ -30,56 +28,63 @@ import com.google.cloud.dataflow.sdk.transforms.SerializableFunction;
 import com.google.cloud.dataflow.sdk.transforms.windowing.BoundedWindow;
 import com.google.cloud.dataflow.sdk.values.PCollectionView;
 import com.google.cloud.dataflow.sdk.values.TupleTag;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import org.apache.spark.api.java.function.FlatMapFunction;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multimap;
+import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.joda.time.Instant;
+import scala.Tuple2;
 
 /**
- * Dataflow's Do functions correspond to Spark's FlatMap functions.
+ * DoFunctions ignore side outputs. MultiDoFunctions deal with side outputs by enrishing the
+ * undelrying data with multiple TupleTags.
  *
- * @param <I> Input element type.
- * @param <O> Output element type.
+ * @param <I> Input type for DoFunction.
+ * @param <O> Output type for DoFunction.
  */
-class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
-    private static final Logger LOG = Logger.getLogger(DoFnFunction.class.getName());
+class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleTag<?>, Object> {
+    // TODO: I think implementing decoding logic will allow us to do away with having two types of
+    // DoFunctions. Josh originally made these two classes in order to help ease the typing of
+    // results. Correctly using coders should just fix this.
 
     private final DoFn<I, O> mFunction;
     private final SparkRuntimeContext mRuntimeContext;
+    private final TupleTag<?> mMainOutputTag;
     private final Map<TupleTag<?>, BroadcastHelper<?>> mSideInputs;
 
-    /**
-     * @param fn         DoFunction to be wrapped.
-     * @param runtime    Runtime to apply function in.
-     * @param sideInputs Side inputs used in DoFunction.
-     */
-    public DoFnFunction(
+    public MultiDoFnFunction(
             DoFn<I, O> fn,
-            SparkRuntimeContext runtime,
+            SparkRuntimeContext runtimeContext,
+            TupleTag<O> mainOutputTag,
             Map<TupleTag<?>, BroadcastHelper<?>> sideInputs) {
         this.mFunction = fn;
-        this.mRuntimeContext = runtime;
-        this.mSideInputs = sideInputs;
+        this.mRuntimeContext = runtimeContext;
+        this.mMainOutputTag = mainOutputTag;
+        this. mSideInputs = sideInputs;
     }
 
-
     @Override
-    public Iterable<O> call(Iterator<I> iter) throws Exception {
-        ProcCtxt<I, O> ctxt = new ProcCtxt<>(mFunction);
-        //setup
+    public Iterable<Tuple2<TupleTag<?>, Object>> call(Iterator<I> iter) throws Exception {
+        ProcCtxt<I, O> ctxt = new ProcCtxt(mFunction);
         mFunction.startBundle(ctxt);
-        //operation
         while (iter.hasNext()) {
             ctxt.element = iter.next();
             mFunction.processElement(ctxt);
         }
-        //cleanup
         mFunction.finishBundle(ctxt);
-        return ctxt.outputs;
+        return Iterables.transform(ctxt.outputs.entries(),
+                new Function<Map.Entry<TupleTag<?>, Object>, Tuple2<TupleTag<?>, Object>>() {
+                    public Tuple2<TupleTag<?>, Object> apply(Map.Entry<TupleTag<?>, Object> input) {
+                        return new Tuple2<TupleTag<?>, Object>(input.getKey(), input.getValue());
+                    }
+                });
     }
 
     private class ProcCtxt<I, O> extends DoFn<I, O>.ProcessContext {
 
-        private List<O> outputs = new LinkedList<>();
+        private Multimap<TupleTag<?>, Object> outputs = LinkedListMultimap.create();
         private I element;
 
         public ProcCtxt(DoFn<I, O> fn) {
@@ -93,20 +98,17 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
 
         @Override
         public <T> T sideInput(PCollectionView<T, ?> view) {
-            return (T) mSideInputs.get(view.getTagInternal()).getValue();
+            return (T)  mSideInputs.get(view.getTagInternal()).getValue();
         }
 
         @Override
         public synchronized void output(O o) {
-            outputs.add(o);
+            outputs.put(mMainOutputTag, o);
         }
 
         @Override
-        public <T> void sideOutput(TupleTag<T> tupleTag, T t) {
-            LOG.warning("sideoutput is an unsupported operation for DoFnFunctions. Use a " +
-                    "MultiDoFunction");
-            throw new UnsupportedOperationException("sideOutput is an unsupported operation for " +
-                    "doFunctions, use a MultiDoFunction instead.");
+        public synchronized <T> void sideOutput(TupleTag<T> tag, T t) {
+            outputs.put(tag, t);
         }
 
         @Override

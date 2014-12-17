@@ -1,5 +1,7 @@
 package com.cloudera.dataflow.spark;
 
+import com.cloudera.dataflow.spark.options.SparkPipelineOptions;
+import com.cloudera.dataflow.spark.options.SparkPipelineOptionsFactory;
 import org.junit.Assert;
 import org.junit.Test;
 

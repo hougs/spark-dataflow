@@ -12,12 +12,10 @@
  * the specific language governing permissions and limitations under the
  * License.
  */
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.transforms;
 
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.cloudera.dataflow.spark.aggregators.AggAccumParam;
+import com.cloudera.dataflow.spark.aggregators.NamedAggregators;
 import com.google.cloud.dataflow.sdk.Pipeline;
 import com.google.cloud.dataflow.sdk.options.PipelineOptions;
 import com.google.cloud.dataflow.sdk.transforms.Aggregator;
@@ -26,8 +24,9 @@ import com.google.cloud.dataflow.sdk.transforms.SerializableFunction;
 import org.apache.spark.Accumulator;
 import org.apache.spark.api.java.JavaSparkContext;
 
-import com.cloudera.dataflow.spark.aggregators.AggAccumParam;
-import com.cloudera.dataflow.spark.aggregators.NamedAggregators;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The SparkRuntimeContext allows us to define useful features on the client side before our
