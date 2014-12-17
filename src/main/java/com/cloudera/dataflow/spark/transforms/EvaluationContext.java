@@ -32,7 +32,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.spark.api.java.JavaRDDLike;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.broadcast.Broadcast;
 
 import java.util.List;
 import java.util.Map;
@@ -102,11 +101,6 @@ public class EvaluationContext implements EvaluationResult {
         return getRDD((PValue) pipeline.getInput(transform));
     }
 
-    <T> BroadcastHelper<T> getBroadcastHelper(PObject<T> value) {
-        Coder<T> coder = value.getCoder();
-        Broadcast<byte[]> bcast = jsc.broadcast(CoderHelpers.toByteArray(get(value), coder));
-        return new BroadcastHelper<>(bcast, coder);
-    }
 
     @Override
     public <T> T get(PObject<T> value) {
@@ -114,7 +108,6 @@ public class EvaluationContext implements EvaluationResult {
             return (T) pobjects.get(value);
         } else if (rdds.containsKey(value)) {
             JavaRDDLike rdd = rdds.get(value);
-            //TODO: need same logic from get() method below here for serialization of bytes
             T res = (T) Iterables.getOnlyElement(rdd.collect());
             pobjects.put(value, res);
             return res;

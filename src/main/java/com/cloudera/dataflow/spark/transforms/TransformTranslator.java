@@ -121,8 +121,7 @@ public class TransformTranslator {
         @Override
         public void evaluate(ParDo.Bound transform, EvaluationContext context) {
             DoFnFunction dofn = new DoFnFunction(transform.getFn(),
-                    context.getRuntimeContext(),
-                    getSideInputs(transform.getSideInputs(), context));
+                    context.getRuntimeContext());
             context.setOutputRDD(transform, context.getInputRDD(transform).mapPartitions(dofn));
         }
     };
@@ -134,8 +133,7 @@ public class TransformTranslator {
             MultiDoFnFunction multifn = new MultiDoFnFunction(
                     transform.getFn(),
                     context.getRuntimeContext(),
-                    (TupleTag) MULTIDO_FG.get("mainOutputTag", transform),
-                    getSideInputs(transform.getSideInputs(), context));
+                    (TupleTag) MULTIDO_FG.get("mainOutputTag", transform));
 
             JavaPairRDD<TupleTag, Object> all = context.getInputRDD(transform)
                     .mapPartitionsToPair(multifn)
@@ -252,15 +250,21 @@ public class TransformTranslator {
         }
     };
 
-    private static Map<TupleTag<?>, BroadcastHelper<?>> getSideInputs(
+  /**
+   * only used to transform inputs to be used in a DoFn
+   * @param views
+   * @param context
+   * @return
+   */
+    private static Map<TupleTag<?>, PObject<?>> getSideInputs(
             Iterable<PCollectionView<?, ?>> views,
             EvaluationContext context) {
         if (views == null) {
             return ImmutableMap.of();
         } else {
-            Map<TupleTag<?>, BroadcastHelper<?>>sideInputs = Maps.newHashMap();
+            Map<TupleTag<?>, PObject<?>>sideInputs = Maps.newHashMap();
             for (PCollectionView<?, ?> view : views) {
-                sideInputs.put(view.getTagInternal(), context.getBroadcastHelper(view.getPObjectInternal()));
+                sideInputs.put(view.getTagInternal(), view.getPObjectInternal());
             }
             return sideInputs;
         }

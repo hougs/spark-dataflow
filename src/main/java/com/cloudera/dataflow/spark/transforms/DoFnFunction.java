@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -45,20 +44,16 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
 
     private final DoFn<I, O> mFunction;
     private final SparkRuntimeContext mRuntimeContext;
-    private final Map<TupleTag<?>, BroadcastHelper<?>> mSideInputs;
 
     /**
      * @param fn         DoFunction to be wrapped.
      * @param runtime    Runtime to apply function in.
-     * @param sideInputs Side inputs used in DoFunction.
      */
     public DoFnFunction(
             DoFn<I, O> fn,
-            SparkRuntimeContext runtime,
-            Map<TupleTag<?>, BroadcastHelper<?>> sideInputs) {
+            SparkRuntimeContext runtime) {
         this.mFunction = fn;
         this.mRuntimeContext = runtime;
-        this.mSideInputs = sideInputs;
     }
 
 
@@ -93,7 +88,7 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
 
         @Override
         public <T> T sideInput(PCollectionView<T, ?> view) {
-            return (T) mSideInputs.get(view.getTagInternal()).getValue();
+            return mRuntimeContext.getSideInput(view.getTagInternal());
         }
 
         @Override

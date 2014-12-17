@@ -14,12 +14,6 @@
  */
 package com.cloudera.dataflow.spark.transforms;
 
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-
-import com.cloudera.dataflow.spark.BroadcastHelper;
-import com.cloudera.dataflow.spark.transforms.SparkRuntimeContext;
 import com.google.cloud.dataflow.sdk.options.PipelineOptions;
 import com.google.cloud.dataflow.sdk.transforms.Aggregator;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
@@ -37,6 +31,10 @@ import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.joda.time.Instant;
 import scala.Tuple2;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+
 /**
  * DoFunctions ignore side outputs. MultiDoFunctions deal with side outputs by enrishing the
  * undelrying data with multiple TupleTags.
@@ -45,24 +43,18 @@ import scala.Tuple2;
  * @param <O> Output type for DoFunction.
  */
 class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleTag<?>, Object> {
-    // TODO: I think implementing decoding logic will allow us to do away with having two types of
-    // DoFunctions. Josh originally made these two classes in order to help ease the typing of
-    // results. Correctly using coders should just fix this.
 
     private final DoFn<I, O> mFunction;
     private final SparkRuntimeContext mRuntimeContext;
-    private final TupleTag<?> mMainOutputTag;
-    private final Map<TupleTag<?>, BroadcastHelper<?>> mSideInputs;
+    private final TupleTag<?> mMainOutputTag;;
 
     public MultiDoFnFunction(
             DoFn<I, O> fn,
             SparkRuntimeContext runtimeContext,
-            TupleTag<O> mainOutputTag,
-            Map<TupleTag<?>, BroadcastHelper<?>> sideInputs) {
+            TupleTag<O> mainOutputTag) {
         this.mFunction = fn;
         this.mRuntimeContext = runtimeContext;
         this.mMainOutputTag = mainOutputTag;
-        this. mSideInputs = sideInputs;
     }
 
     @Override
@@ -98,7 +90,7 @@ class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleT
 
         @Override
         public <T> T sideInput(PCollectionView<T, ?> view) {
-            return (T)  mSideInputs.get(view.getTagInternal()).getValue();
+          return mRuntimeContext.getSideInput(view.getTagInternal());
         }
 
         @Override
