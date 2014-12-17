@@ -38,6 +38,15 @@ public class SparkPipelineRunner extends PipelineRunner<EvaluationResult> {
   private SparkPipelineOptions mOptions;
 
   /**
+   * Creates and returns a new SparkPipelineRunner with default options.
+   * @return
+   */
+  public static SparkPipelineRunner create() {
+    SparkPipelineOptions options = SparkPipelineOptionsFactory.create();
+    return new SparkPipelineRunner(options);
+  }
+
+  /**
    * Creates and returns a new SparkPipelineRunner with specified options.
    * @param options The SparkPipelineOptions to use when executing the job.
    * @return
