@@ -18,11 +18,9 @@ import com.google.cloud.dataflow.sdk.values.KV;
 import com.google.cloud.dataflow.sdk.values.PCollection;
 import com.google.cloud.dataflow.sdk.values.PCollectionList;
 import com.google.cloud.dataflow.sdk.values.PCollectionTuple;
-import com.google.cloud.dataflow.sdk.values.PCollectionView;
 import com.google.cloud.dataflow.sdk.values.PObject;
 import com.google.cloud.dataflow.sdk.values.PObjectValueTuple;
 import com.google.cloud.dataflow.sdk.values.TupleTag;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -249,26 +247,6 @@ public class TransformTranslator {
             context.setPObjectTuple(transform, outputValues);
         }
     };
-
-  /**
-   * only used to transform inputs to be used in a DoFn
-   * @param views
-   * @param context
-   * @return
-   */
-    private static Map<TupleTag<?>, PObject<?>> getSideInputs(
-            Iterable<PCollectionView<?, ?>> views,
-            EvaluationContext context) {
-        if (views == null) {
-            return ImmutableMap.of();
-        } else {
-            Map<TupleTag<?>, PObject<?>>sideInputs = Maps.newHashMap();
-            for (PCollectionView<?, ?> view : views) {
-                sideInputs.put(view.getTagInternal(), view.getPObjectInternal());
-            }
-            return sideInputs;
-        }
-    }
 
     private static final Map<Class<? extends PTransform>, TransformEvaluator> mEvaluators = Maps.newHashMap();
     static {

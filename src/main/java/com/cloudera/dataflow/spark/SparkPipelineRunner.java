@@ -25,6 +25,7 @@ import com.google.cloud.dataflow.sdk.runners.PipelineRunner;
 import com.google.cloud.dataflow.sdk.runners.TransformTreeNode;
 import com.google.cloud.dataflow.sdk.transforms.PTransform;
 import com.google.cloud.dataflow.sdk.values.PValue;
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 
 import java.util.logging.Logger;
@@ -91,6 +92,10 @@ public class SparkPipelineRunner extends PipelineRunner<EvaluationResult> {
   }
 
   private JavaSparkContext getContext() {
+    SparkConf conf = new SparkConf();
+    conf.setMaster(mOptions.getSparkMaster());
+    conf.setAppName(mOptions.getJobName());
+    conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
     return new JavaSparkContext(mOptions.getSparkMaster(), mOptions.getJobName());
   }
 

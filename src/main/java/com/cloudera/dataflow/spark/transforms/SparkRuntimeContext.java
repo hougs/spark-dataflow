@@ -22,7 +22,6 @@ import com.google.cloud.dataflow.sdk.transforms.Aggregator;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
 import com.google.cloud.dataflow.sdk.transforms.SerializableFunction;
 import com.google.cloud.dataflow.sdk.values.PCollectionView;
-import com.google.cloud.dataflow.sdk.values.PObject;
 import com.google.cloud.dataflow.sdk.values.TupleTag;
 import org.apache.spark.Accumulator;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -47,7 +46,7 @@ class SparkRuntimeContext implements Serializable {
    */
   private Map<String, Aggregator> mAggregators = new HashMap<>();
   private JavaSparkContext mJSparkContext;
-  private Map<TupleTag, Broadcast<PObject<? extends Object>>> mSideInputs = new HashMap<>();
+  private Map<TupleTag, Broadcast<?>> mSideInputs = new HashMap<>();
 
   public SparkRuntimeContext(JavaSparkContext jsc, Pipeline pipeline) {
     this.mJSparkContext = jsc;
@@ -73,7 +72,7 @@ class SparkRuntimeContext implements Serializable {
   public void broadcastSideInputs(Iterable<PCollectionView<?, ?>> views) {
     for(PCollectionView<?, ?> view: views) {
       Type T = view.getTagInternal().getTypeToken().getType();
-      Broadcast<PObject<>> obj = mJSparkContext.broadcast(view.getPObjectInternal());
+      Broadcast<?> obj = mJSparkContext.broadcast(view.getPObjectInternal());
       mSideInputs.put(view.getTagInternal(), obj);
     }
   }
