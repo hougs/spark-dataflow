@@ -28,7 +28,6 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
 
 import java.io.Serializable;
-import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -71,7 +70,6 @@ class SparkRuntimeContext implements Serializable {
 
   public void broadcastSideInputs(Iterable<PCollectionView<?, ?>> views) {
     for(PCollectionView<?, ?> view: views) {
-      Type T = view.getTagInternal().getTypeToken().getType();
       Broadcast<?> obj = mJSparkContext.broadcast(view.getPObjectInternal());
       mSideInputs.put(view.getTagInternal(), obj);
     }
