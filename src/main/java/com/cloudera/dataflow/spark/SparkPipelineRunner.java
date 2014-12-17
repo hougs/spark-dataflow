@@ -27,19 +27,30 @@ import java.util.logging.Logger;
 /**
  * The SparkPipelineRunner translate operations defined on a pipeline to a representation
  * executable by Spark, and then submitting the job to Spark to be executed. If we wanted to run
- * a dataflow pipeline in Spark's local mode with two threads, we would do the following:
+ * a dataflow pipeline with the default options of a single threaded spark instance in local mode,
+ * we would do the following:
  *    Pipeline p = <logic for pipeline creation >
- *    EvaluationResult result = new SparkPipelineRunner("local[2]").run(p);
+ *    EvaluationResult result = SparkPipelineRunner.create().run(p);
+ *
+ *  To create a pipeline runner to run against a different spark cluster, with a custom master url
+ *  we would do the following:
+ *    Pipeline p = <logic for pipeline creation >
+ *    SparkPipelineOptions options = SparkPipelineOptionsFactory.create();
+ *    options.setSparkMaster("spark://host:port");
+ *    EvaluationResult result = SparkPipelineRunner.create(options).run(p);
+ *
  */
 public class SparkPipelineRunner extends PipelineRunner<EvaluationResult> {
 
-  private static final Logger LOG =
-      Logger.getLogger(SparkPipelineRunner.class.getName());
+  private static final Logger LOG = Logger.getLogger(SparkPipelineRunner.class.getName());
+  /** Options used in this pipeline runner.*/
   private SparkPipelineOptions mOptions;
 
   /**
-   * Creates and returns a new SparkPipelineRunner with default options.
-   * @return
+   * Creates and returns a new SparkPipelineRunner with default options. In particular, against a
+   * spark instance running in local mode.
+   *
+   * @return A pipeline runner with default options.
    */
   public static SparkPipelineRunner create() {
     SparkPipelineOptions options = SparkPipelineOptionsFactory.create();
@@ -48,8 +59,9 @@ public class SparkPipelineRunner extends PipelineRunner<EvaluationResult> {
 
   /**
    * Creates and returns a new SparkPipelineRunner with specified options.
+   *
    * @param options The SparkPipelineOptions to use when executing the job.
-   * @return
+   * @return A pipeline runner that will execute with specified options.
    */
   public static SparkPipelineRunner create(SparkPipelineOptions options) {
     return new SparkPipelineRunner(options);
