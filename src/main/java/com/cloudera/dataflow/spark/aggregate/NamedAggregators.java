@@ -13,7 +13,7 @@
  * License.
  */
 
-package com.cloudera.dataflow.spark.aggregators;
+package com.cloudera.dataflow.spark.aggregate;
 
 import com.google.cloud.dataflow.sdk.transforms.Combine;
 import com.google.cloud.dataflow.sdk.transforms.SerializableFunction;
@@ -30,9 +30,14 @@ import java.util.TreeMap;
  * is launched. We can then add aggregators on the fly in Spark.
  */
 public class NamedAggregators implements Serializable {
-  /** Map from aggregator name to current state. */
+  /**
+   * Map from aggregator name to current state.
+   */
   private final Map<String, State<?, ?, ?>> mNamedAggregators = new TreeMap<>();
-  /** Constructs a new NamedAggregators instance. */
+
+  /**
+   * Constructs a new NamedAggregators instance.
+   */
   public NamedAggregators() {
   }
 
@@ -40,7 +45,7 @@ public class NamedAggregators implements Serializable {
    * Constructs a new named aggregators instance that contains a mapping from the specified
    * `named` to the associated initial state.
    *
-   * @param name Name of aggregator.
+   * @param name  Name of aggregator.
    * @param state Associated State.
    */
   public NamedAggregators(String name, State<?, ?, ?> state) {
@@ -60,9 +65,9 @@ public class NamedAggregators implements Serializable {
   /**
    * Merges another NamedAggregators instance with this instance.
    *
-   * @param other The other instance of named aggregators ot merge.
-   * @return This instance of Named aggregators with associated states updated to reflect the
-   *        other instance's aggregators.
+   * @param other The other instance of named aggragtors ot merge.
+   * @return This instance of Named aggragtors with associated states updated to reflect the
+   * other instance's aggregators.
    */
   public NamedAggregators merge(NamedAggregators other) {
     for (Map.Entry<String, State<?, ?, ?>> e : other.mNamedAggregators.entrySet()) {

@@ -13,12 +13,23 @@
  * License.
  */
 
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.aggregate;
 
-import java.io.Serializable;
+import org.apache.spark.AccumulatorParam;
 
-import com.google.cloud.dataflow.sdk.transforms.PTransform;
+public class AggAccumParam implements AccumulatorParam<NamedAggregators> {
+  @Override
+  public NamedAggregators addAccumulator(NamedAggregators current, NamedAggregators added) {
+    return current.merge(added);
+  }
 
-public interface TransformEvaluator<PT extends PTransform> extends Serializable {
-    void evaluate(PT transform, EvaluationContext context);
+  @Override
+  public NamedAggregators addInPlace(NamedAggregators current, NamedAggregators added) {
+    return addAccumulator(current, added);
+  }
+
+  @Override
+  public NamedAggregators zero(NamedAggregators initialValue) {
+    return new NamedAggregators();
+  }
 }

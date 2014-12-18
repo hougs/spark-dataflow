@@ -15,11 +15,17 @@
 
 package com.cloudera.dataflow.spark;
 
+import com.cloudera.dataflow.spark.option.SparkPipelineOptions;
+import com.cloudera.dataflow.spark.option.SparkPipelineOptionsFactory;
+import com.cloudera.dataflow.spark.transform.EvaluationContext;
+import com.cloudera.dataflow.spark.transform.TransformEvaluator;
+import com.cloudera.dataflow.spark.transform.TransformTranslator;
 import com.google.cloud.dataflow.sdk.Pipeline;
 import com.google.cloud.dataflow.sdk.runners.PipelineRunner;
 import com.google.cloud.dataflow.sdk.runners.TransformTreeNode;
 import com.google.cloud.dataflow.sdk.transforms.PTransform;
 import com.google.cloud.dataflow.sdk.values.PValue;
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 
 import java.util.logging.Logger;
@@ -29,22 +35,24 @@ import java.util.logging.Logger;
  * executable by Spark, and then submitting the job to Spark to be executed. If we wanted to run
  * a dataflow pipeline with the default options of a single threaded spark instance in local mode,
  * we would do the following:
- *    Pipeline p = <logic for pipeline creation >
- *    EvaluationResult result = SparkPipelineRunner.create().run(p);
- *
- *  To create a pipeline runner to run against a different spark cluster, with a custom master url
- *  we would do the following:
- *    Pipeline p = <logic for pipeline creation >
- *    SparkPipelineOptions options = SparkPipelineOptionsFactory.create();
- *    options.setSparkMaster("spark://host:port");
- *    EvaluationResult result = SparkPipelineRunner.create(options).run(p);
- *
+ * Pipeline p = <logic for pipeline creation >
+ * EvaluationResult result = SparkPipelineRunner.create().run(p);
+ * <p/>
+ * To create a pipeline runner to run against a different spark cluster, with a custom master url
+ * we would do the following:
+ * Pipeline p = <logic for pipeline creation >
+ * SparkPipelineOptions options = SparkPipelineOptionsFactory.create();
+ * options.setSparkMaster("spark://host:port");
+ * EvaluationResult result = SparkPipelineRunner.create(options).run(p);
  */
 public class SparkPipelineRunner extends PipelineRunner<EvaluationResult> {
 
   private static final Logger LOG = Logger.getLogger(SparkPipelineRunner.class.getName());
-  /** Options used in this pipeline runner.*/
-  private final SparkPipelineOptions mOptions;
+
+  /**
+   * Options used in this pipeline runner.
+   */
+  private SparkPipelineOptions mOptions;
 
   /**
    * Creates and returns a new SparkPipelineRunner with default options. In particular, against a
@@ -80,13 +88,17 @@ public class SparkPipelineRunner extends PipelineRunner<EvaluationResult> {
   @Override
   public EvaluationResult run(Pipeline pipeline) {
     JavaSparkContext jsc = getContext();
-    EvaluationContext ctxt = new EvaluationContext(jsc, pipeline);
-    pipeline.traverseTopologically(new Evaluator(ctxt));
-    return ctxt;
+    EvaluationContext evalContext = new EvaluationContext(jsc, pipeline);
+    pipeline.traverseTopologically(new Evaluator(evalContext));
+    return evalContext;
   }
 
   private JavaSparkContext getContext() {
-    return new JavaSparkContext(mOptions.getSparkMaster(), mOptions.getJobName());
+    SparkConf conf = new SparkConf();
+    conf.setMaster(mOptions.getSparkMaster());
+    conf.setAppName("spark-dataflow-pipeline"); //TODO: Can we retrieve this from pipeline opts?
+    conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+    return new JavaSparkContext(conf);
   }
 
   private static class Evaluator implements Pipeline.PipelineVisitor {
@@ -108,7 +120,8 @@ public class SparkPipelineRunner extends PipelineRunner<EvaluationResult> {
     @Override
     public void visitTransform(TransformTreeNode node) {
       PTransform<?, ?> transform = node.getTransform();
-      TransformEvaluator evaluator = TransformTranslator.getTransformEvaluator(transform.getClass());
+      TransformEvaluator evaluator = TransformTranslator.getTransformEvaluator(transform.getClass
+          ());
       LOG.info("Evaluating " + transform);
       evaluator.evaluate(transform, ctxt);
     }

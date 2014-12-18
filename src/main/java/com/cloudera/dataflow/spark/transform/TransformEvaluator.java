@@ -13,15 +13,12 @@
  * License.
  */
 
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.transform;
 
-import com.google.cloud.dataflow.sdk.options.Default;
-import com.google.cloud.dataflow.sdk.options.Description;
-import com.google.cloud.dataflow.sdk.options.PipelineOptions;
+import com.google.cloud.dataflow.sdk.transforms.PTransform;
 
-public interface SparkPipelineOptions extends PipelineOptions {
-  @Description("The url of the spark master to connect to, (e.g. spark://host:port, local[4]).")
-  @Default.String("local[1]")
-  String getSparkMaster();
-  void setSparkMaster(String master);
+import java.io.Serializable;
+
+public interface TransformEvaluator<PT extends PTransform> extends Serializable {
+  void evaluate(PT transform, EvaluationContext context);
 }

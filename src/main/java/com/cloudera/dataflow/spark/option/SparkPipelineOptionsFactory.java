@@ -13,7 +13,7 @@
  * License.
  */
 
-package com.cloudera.dataflow.spark;
+package com.cloudera.dataflow.spark.option;
 
 import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
 
@@ -22,6 +22,6 @@ public final class SparkPipelineOptionsFactory {
   }
 
   public static SparkPipelineOptions create() {
-    return PipelineOptionsFactory.create(SparkPipelineOptions.class);
+    return PipelineOptionsFactory.as(SparkPipelineOptions.class);
   }
 }

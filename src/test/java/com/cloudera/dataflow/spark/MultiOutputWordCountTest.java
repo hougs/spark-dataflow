@@ -28,12 +28,12 @@ import com.google.cloud.dataflow.sdk.transforms.Max;
 import com.google.cloud.dataflow.sdk.transforms.PTransform;
 import com.google.cloud.dataflow.sdk.transforms.ParDo;
 import com.google.cloud.dataflow.sdk.transforms.Sum;
+import com.google.cloud.dataflow.sdk.transforms.View;
 import com.google.cloud.dataflow.sdk.values.KV;
 import com.google.cloud.dataflow.sdk.values.PCollection;
 import com.google.cloud.dataflow.sdk.values.PCollectionList;
 import com.google.cloud.dataflow.sdk.values.PCollectionTuple;
 import com.google.cloud.dataflow.sdk.values.PCollectionView;
-import com.google.cloud.dataflow.sdk.values.SingletonPCollectionView;
 import com.google.cloud.dataflow.sdk.values.TupleTag;
 import com.google.cloud.dataflow.sdk.values.TupleTagList;
 import org.junit.Assert;
@@ -55,7 +55,7 @@ public class MultiOutputWordCountTest {
     PCollectionList<String> list = PCollectionList.of(w1).and(w2);
 
     PCollection<String> union = list.apply(Flatten.<String>create());
-    PCollectionTuple luc = union.apply(new CountWords(SingletonPCollectionView.of(regex)));
+    PCollectionTuple luc = union.apply(new CountWords(regex.apply(View.<String>asSingleton())));
     PCollection<Long> unique = luc.get(lowerCnts).apply(ApproximateUnique.<KV<String,
         Long>>globally(16));
 
