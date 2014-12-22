@@ -1,8 +1,8 @@
 package com.cloudera.dataflow.spark.transform;
 
-import com.cloudera.dataflow.spark.aggregate.BroadcastHelper;
 import com.google.api.client.util.Maps;
 import com.google.cloud.dataflow.sdk.coders.Coder;
+import com.google.cloud.dataflow.sdk.coders.IterableCoder;
 import com.google.cloud.dataflow.sdk.io.AvroIO;
 import com.google.cloud.dataflow.sdk.io.TextIO;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
@@ -17,8 +17,8 @@ import com.google.cloud.dataflow.sdk.values.PCollection;
 import com.google.cloud.dataflow.sdk.values.PCollectionList;
 import com.google.cloud.dataflow.sdk.values.PCollectionTuple;
 import com.google.cloud.dataflow.sdk.values.PCollectionView;
+import com.google.cloud.dataflow.sdk.values.PInput;
 import com.google.cloud.dataflow.sdk.values.TupleTag;
-import com.google.common.collect.ImmutableMap;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaRDDLike;
@@ -124,9 +124,7 @@ public class TransformTranslator {
        * gets a map from tuple tag to a broadcast helper. The broadcast helper contains a
        * reference to the brpoadcast variable as well as the coder to deserialize it.
        */
-      context.getRuntimeContext().setSideInputs(transform.getSideInputs(), context.getCoderRegistry());
-      DoFnFunction dofn = new DoFnFunction(transform.getFn(),
-          context.getRuntimeContext());
+      DoFnFunction dofn = new DoFnFunction(transform.getFn(), context);
       context.setOutputRDD(transform, context.getInputRDD(transform).mapPartitions(dofn));
     }
   };
@@ -136,10 +134,9 @@ public class TransformTranslator {
       .BoundMulti>() {
     @Override
     public void evaluate(ParDo.BoundMulti transform, EvaluationContext context) {
-      context.getRuntimeContext().setSideInputs(transform.getSideInputs(), context.getCoderRegistry());
       MultiDoFnFunction multifn = new MultiDoFnFunction(
           transform.getFn(),
-          context.getRuntimeContext(),
+          context,
           (TupleTag) MULTIDO_FG.get("mainOutputTag", transform));
 
       JavaPairRDD<TupleTag, Object> all = context.getInputRDD(transform)
@@ -207,12 +204,18 @@ public class TransformTranslator {
     }
   };
 
-  private static TransformEvaluator<View.CreatePCollectionView> CREATE_PCOLL_VIEW = new
-      TransformEvaluator<View.CreatePCollectionView>() {
+  private static TransformEvaluator<View.CreatePCollectionView> CREATE_PCOLL_VIEW = new TransformEvaluator<View.CreatePCollectionView>() {
+
 
     @Override
     public void evaluate(View.CreatePCollectionView transform, EvaluationContext context) {
-      context.setOutputRDD(transform, context.getInputRDD(transform));
+      //This PCollection is either a single element or an interable,
+      // so serialize it like an iterable
+      Coder<?> inputCoder = context.getCoderRegistry().getDefaultCoder(transform.getInput());
+      Coder<?> outputCoder = IterableCoder.of(inputCoder);
+      PCollectionView view =  context.<PCollectionView>getOutput(transform);
+      PInput input = context.getPipeline().getInput(transform);
+      context.setSideInput(view, input, outputCoder);
     }
   };
 

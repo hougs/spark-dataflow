@@ -18,6 +18,7 @@ package com.cloudera.dataflow.spark.transform;
 import com.cloudera.dataflow.spark.EvaluationResult;
 import com.cloudera.dataflow.spark.aggregate.BroadcastHelper;
 import com.google.cloud.dataflow.sdk.Pipeline;
+import com.google.cloud.dataflow.sdk.coders.Coder;
 import com.google.cloud.dataflow.sdk.coders.CoderRegistry;
 import com.google.cloud.dataflow.sdk.transforms.PTransform;
 import com.google.cloud.dataflow.sdk.values.PCollection;
@@ -30,12 +31,14 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.spark.api.java.JavaRDDLike;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.broadcast.Broadcast;
 
 import java.util.Map;
 import java.util.Set;
 
 /**
- * The context is available to every transformation when that transformation gets evaluated.
+ * This context is available to every transformation when that transformation gets evaluated. The
+ * actions of PTransforms are translated to
  */
 public class EvaluationContext implements EvaluationResult {
   private final JavaSparkContext mJSparkContext;
@@ -43,14 +46,12 @@ public class EvaluationContext implements EvaluationResult {
   private final SparkRuntimeContext mRuntimeContext;
   private final Map<PValue, JavaRDDLike> mRdds = Maps.newHashMap();
   private final Set<PValue> mMultiReads = Sets.newHashSet();
-  private final Map<PCollectionView<?, ?>, BroadcastHelper<?>> mSideInputs = Maps.newHashMap();
-  private final CoderRegistry mRegistry;
+  private final Map<String, BroadcastHelper<?>> mSideInputs = Maps.newHashMap();
 
   public EvaluationContext(JavaSparkContext jsc, Pipeline pipeline) {
     this.mJSparkContext = jsc;
     this.mPipeline = pipeline;
     this.mRuntimeContext = new SparkRuntimeContext(jsc, pipeline);
-    this.mRegistry = pipeline.getCoderRegistry();
   }
 
   JavaSparkContext getSparkContext() {
@@ -97,7 +98,7 @@ public class EvaluationContext implements EvaluationResult {
   }
 
   CoderRegistry getCoderRegistry() {
-    return mRegistry;
+    return mPipeline.getCoderRegistry();
   }
 
   @Override
@@ -113,6 +114,31 @@ public class EvaluationContext implements EvaluationResult {
   @Override
   public <T> T get(TupleTag<T> tupleTag) {
     return null;
+  }
+
+  /**
+   * Broadcasts the specified side input.
+   *
+   * @param <T> The type of the underlying object being broadcast.
+   * @return A broadcast helper to assist in deserializing the broadcast side input.
+   */
+  <T> BroadcastHelper<T> broadcast(PInput input, Coder coder) {
+     Broadcast<byte[]> bcast = mJSparkContext.broadcast(CoderHelpers.toByteArray(input,
+     coder));
+    return new BroadcastHelper<T>(bcast, coder);
+  }
+
+  <T, WT> void setSideInput(PCollectionView<T, WT> view, PInput input, Coder<WT> coder) {
+      mSideInputs.put(view.getTagInternal().getId(), broadcast(input, coder));
+  }
+
+  <T> T getSideInput(PCollectionView<T, ?> view) {
+    String id = view.getTagInternal().getId();
+    if (!mSideInputs.containsKey(id)) {
+      throw new IllegalArgumentException( "calling sideInput() with unknown view; did you forget" +
+          " to pass the view in ParDo.withSideInputs()?");
+    }
+    return (T) mSideInputs.get(id).getValue();
   }
 
 }

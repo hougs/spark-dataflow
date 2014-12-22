@@ -15,7 +15,6 @@
 
 package com.cloudera.dataflow.spark.transform;
 
-import com.cloudera.dataflow.spark.aggregate.BroadcastHelper;
 import com.google.cloud.dataflow.sdk.options.PipelineOptions;
 import com.google.cloud.dataflow.sdk.transforms.Aggregator;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
@@ -32,7 +31,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -46,18 +44,19 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
 
   private final DoFn<I, O> mFunction;
   private final SparkRuntimeContext mRuntimeContext;
+  private final EvaluationContext mEvalContext;
 
   /**
    * @param fn      DoFunction to be wrapped.
-   * @param runtime Runtime to apply function in.
-   * @param sideInputs Side inputs used in DoFunction.
+   * @param evaluationContext Evaluation context to apply function in.
    */
   public DoFnFunction(
       DoFn<I, O> fn,
-      SparkRuntimeContext runtime,
-      Map<TupleTag<?>, BroadcastHelper<?>> sideInputs) {
+      EvaluationContext evaluationContext
+      ) {
     this.mFunction = fn;
-    this.mRuntimeContext = runtime;
+    this.mRuntimeContext = evaluationContext.getRuntimeContext();
+    this.mEvalContext = evaluationContext;
   }
 
 
@@ -92,14 +91,7 @@ class DoFnFunction<I, O> implements FlatMapFunction<Iterator<I>, O> {
 
     @Override
     public <T> T sideInput(PCollectionView<T, ?> view) {
-      TupleTag<?> tag = view.getTagInternal();
-      if (!mSideInputs.containsKey(tag)) {
-        throw new IllegalArgumentException(
-            "calling sideInput() with unknown view; " +
-                "did you forget to pass the view in " +
-                "ParDo.withSideInputs()?");
-      }
-      return (T) mSideInputs.get(tag).getValue();
+      return mEvalContext.getSideInput(view);
     }
 
     @Override

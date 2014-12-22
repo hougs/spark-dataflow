@@ -15,24 +15,17 @@
 package com.cloudera.dataflow.spark.transform;
 
 import com.cloudera.dataflow.spark.aggregate.AggAccumParam;
-import com.cloudera.dataflow.spark.aggregate.BroadcastHelper;
 import com.cloudera.dataflow.spark.aggregate.NamedAggregators;
 import com.google.cloud.dataflow.sdk.Pipeline;
-import com.google.cloud.dataflow.sdk.coders.CoderRegistry;
 import com.google.cloud.dataflow.sdk.options.PipelineOptions;
 import com.google.cloud.dataflow.sdk.transforms.Aggregator;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
 import com.google.cloud.dataflow.sdk.transforms.SerializableFunction;
-import com.google.cloud.dataflow.sdk.util.WindowedValue;
-import com.google.cloud.dataflow.sdk.values.PCollectionView;
-import com.google.cloud.dataflow.sdk.values.TupleTag;
 import org.apache.spark.Accumulator;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.broadcast.Broadcast;
 
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,13 +44,8 @@ public class SparkRuntimeContext implements Serializable {
    * Map from names to dataflow defined aggregators.
    */
   private Map<String, Aggregator> mAggregators = new HashMap<>();
-  /** undelrying spark context */
-  private JavaSparkContext mJSparkContext;
-  /** Map from TupleTags references to Broadcast variables.*/
-  private Map<TupleTag<?>, BroadcastHelper<?>> mSideInputs = new HashMap<>();
 
   public SparkRuntimeContext(JavaSparkContext jsc, Pipeline pipeline) {
-    this.mJSparkContext = jsc;
     this.accum = jsc.accumulator(new NamedAggregators(), new AggAccumParam());
   }
 
@@ -121,32 +109,6 @@ public class SparkRuntimeContext implements Serializable {
       mAggregators.put(named, aggregator);
     }
     return aggregator;
-  }
-
-  /**
-   * Broadcasts the specified side input.
-   *
-   * @param view The side input to broadcast.
-   * @param <T> The type of the underlying object being broadcast.
-   * @return A broadcast helper to assist in deserializing the broadcast side input.
-   */
-  <T> BroadcastHelper<T> broadcast(PCollectionView<T, ?> view, CoderRegistry registry) {
-    TupleTag<?> tag = view.getTagInternal();
-    T inputToBroadcast = view.fromIterableInternal((Iterable<WindowedValue<?>>) view.get
-        (tag));
-    Broadcast<byte[]> bcast = mJSparkContext.broadcast(CoderHelpers.toByteArray(inputToBroadcast,
-        registry.getDefaultCoder(tag)));
-    return new BroadcastHelper<>(bcast, registry.getDefaultCoder(tag)));
-  }
-
-  void setSideInputs(List<PCollectionView<?, ?>> views, CoderRegistry registry) {
-    for (PCollectionView<?, ?> view : views) {
-      mSideInputs.put(view.getTagInternal(), broadcast(view, registry));
-    }
-  }
-
-  public <T> T getSideInput(PCollectionView<T, ?> view) {
-    return (T) mSideInputs.get(view).getValue();
   }
 
   /**

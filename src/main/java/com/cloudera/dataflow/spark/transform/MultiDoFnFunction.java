@@ -46,14 +46,16 @@ class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleT
 
   private final DoFn<I, O> mFunction;
   private final SparkRuntimeContext mRuntimeContext;
+  private final EvaluationContext mEvalContext;
   private final TupleTag<?> mMainOutputTag;
 
   public MultiDoFnFunction(
       DoFn<I, O> fn,
-      SparkRuntimeContext runtimeContext,
+      EvaluationContext evaluationContext,
       TupleTag<O> mainOutputTag) {
     this.mFunction = fn;
-    this.mRuntimeContext = runtimeContext;
+    this.mRuntimeContext = evaluationContext.getRuntimeContext();
+    this.mEvalContext = evaluationContext;
     this.mMainOutputTag = mainOutputTag;
   }
 
@@ -90,7 +92,7 @@ class MultiDoFnFunction<I, O> implements PairFlatMapFunction<Iterator<I>, TupleT
 
     @Override
     public <T> T sideInput(PCollectionView<T, ?> view) {
-      return (T)  mRuntimeContext.getSideInput(view);
+      return (T)  mEvalContext.getSideInput(view);
     }
 
     @Override

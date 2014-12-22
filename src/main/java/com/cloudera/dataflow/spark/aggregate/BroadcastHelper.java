@@ -39,20 +39,11 @@ public class BroadcastHelper<T> implements Serializable {
     return value;
   }
 
-<<<<<<< HEAD:src/main/java/com/cloudera/dataflow/spark/BroadcastHelper.java
-    private T deserialize() {
-        try {
-            return coder.decode(new ByteArrayInputStream(bcast.value()), new Coder.Context(true));
-        } catch (IOException e) {
-            throw new IllegalStateException("Error deserializing broadcast variable", e);
-        }
-=======
   private T deserialize() {
     try {
       return coder.decode(new ByteArrayInputStream(bcast.value()), new Coder.Context(true));
     } catch (IOException e) {
-      throw new RuntimeException("Error deserializing broadcast variable", e);
->>>>>>> 62c1731... Update pom and fix what gets broken:src/main/java/com/cloudera/dataflow/spark/aggregate/BroadcastHelper.java
+      throw new IllegalStateException("Error deserializing broadcast variable", e);
     }
   }
-}
+};
